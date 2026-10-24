@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
-const { detectChord, romanNumeral, parseNotes, parseKey } = createRequire(import.meta.url)("../src/canvas.js");
+const { detectChord, romanNumeral, parseNotes, parseKey, layout } = createRequire(import.meta.url)("../src/canvas.js");
 
 const C = 0, A = 9;
 const name = (notes) => detectChord(notes).name;
@@ -35,10 +35,13 @@ test("octave doubling and note order do not matter", () => {
     assert.equal(name([72, 48, 64, 55]), "C");
 });
 
-test("one and two notes", () => {
-    assert.equal(name([60]), "C");
+test("a power chord is a chord; single notes and other intervals are not", () => {
     assert.equal(name([60, 67]), "C5");
-    assert.equal(name([60, 64]), "C-E");
+    assert.equal(roman([60, 67], C, "Major"), "I5");
+    assert.equal(detectChord([]), null);
+    assert.equal(detectChord([60]), null);
+    assert.equal(detectChord([60, 72]), null);
+    assert.equal(detectChord([60, 64]), null);
 });
 
 test("unknown cluster gets a question mark", () => {
@@ -77,6 +80,20 @@ test("unknown scale falls back to chromatic numerals", () => {
 
 test("no numeral without a key", () => {
     assert.equal(roman([60, 64, 67], -1, ""), null);
+});
+
+test("layout keeps one text size and only wraps long chords", () => {
+    const text = (l) => l.map((e) => e.text);
+    const sizes = (l) => l.map((e) => e.scale);
+    assert.deepEqual(layout(128, 40, "Am7", "vi7"), [{ text: "Am7 (vi7)", scale: 2 }]);
+    assert.deepEqual(layout(128, 40, "C/E", "I"), [{ text: "C/E (I)", scale: 2 }]);
+    assert.deepEqual(layout(128, 40, "Am7", null), [{ text: "Am7", scale: 2 }]);
+    const long = layout(128, 40, "Dbm7b5/G", "bii7b5");
+    assert.deepEqual(text(long), ["Dbm7b5/G", "(bii7b5)"]);
+    assert.deepEqual(sizes(long), [2, 2]);
+    assert.deepEqual(sizes(layout(128, 40, "Abmaj9/Eb", "bVIM9")), [2, 2]);
+    /* a band too short for two lines at the usual size drops to the small size */
+    assert.deepEqual(sizes(layout(128, 30, "Dbm7b5/G", "bii7b5")), [1]);
 });
 
 test("parses what the DSP publishes", () => {

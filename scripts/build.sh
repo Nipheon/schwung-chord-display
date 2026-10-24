@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Chord Display module (ARM64). Uses Docker for cross-compilation
+# Build the Chord Display audio FX (ARM64). Uses Docker for cross-compilation
 # unless CROSS_PREFIX is set (e.g. a native ARM build).
 set -e
 
@@ -19,22 +19,23 @@ fi
 CROSS_PREFIX="${CROSS_PREFIX:-aarch64-linux-gnu-}"
 cd "$REPO_ROOT"
 
-# A midi_fx is loaded by the chain host as <id>/dsp.so, whatever module.json says.
+# An audio_fx is loaded by the chain host as <id>/<id>.so, whatever module.json says.
+rm -rf dist/chord-display dist/chord-display-module.tar.gz
 mkdir -p build dist/chord-display
 ${CROSS_PREFIX}gcc -O2 -shared -fPIC \
     -march=armv8-a -mtune=cortex-a72 \
     -fno-stack-protector -DNDEBUG \
     -Wall -Wextra \
     src/dsp/chord_display.c \
-    -o build/dsp.so \
+    -o build/chord-display.so \
     -Isrc/dsp \
     -ldl
 
 # cat, not cp: avoids ExtFS deallocation issues with Docker mounts
 cat src/module.json > dist/chord-display/module.json
 cat src/canvas.js > dist/chord-display/canvas.js
-cat build/dsp.so > dist/chord-display/dsp.so
-chmod +x dist/chord-display/dsp.so
+cat build/chord-display.so > dist/chord-display/chord-display.so
+chmod +x dist/chord-display/chord-display.so
 
 (cd dist && tar -czf chord-display-module.tar.gz chord-display/)
 echo "Tarball: dist/chord-display-module.tar.gz"

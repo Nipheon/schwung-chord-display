@@ -4,10 +4,11 @@
  * here: naming the chord, the roman numeral, and drawing both.
  *
  *   key           small, top left         C Major
- *   chord name    large, centred          Am7, C/E
- *   numeral       below the name          vi7
+ *   chord         large, centred          Am7 (vi7)
  *
- * Inversions show only as a slash in the name; the numeral ignores the bass.
+ * The text shrinks for long names. Inversions show only as a slash in the
+ * name; the numeral ignores the bass. A single note or a plain interval is
+ * not a chord and clears the display (shown as "-").
  */
 
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
@@ -46,7 +47,8 @@ function rotate(mask, by) {
     return ((mask >> by) | (mask << (12 - by))) & 0xFFF;
 }
 
-/* notes: MIDI note numbers. Returns null for no notes, else
+/* notes: MIDI note numbers. Returns null when there is no chord: no notes, a
+ * single note, or two notes that are not a power chord. Otherwise
  * { name, root, bass, tpl, count }; root and tpl are null when nothing fits. */
 function detectChord(notes) {
     if (!notes || !notes.length) return null;
@@ -57,7 +59,7 @@ function detectChord(notes) {
     const pcs = [];
     for (let pc = 0; pc < 12; pc++) if (mask & (1 << pc)) pcs.push(pc);
 
-    if (pcs.length === 1) return { name: NOTE_NAMES[bass], root: null, bass, tpl: null, count: 1 };
+    if (pcs.length === 1) return null;
 
     let best = null;
     for (const root of pcs) {
@@ -74,10 +76,7 @@ function detectChord(notes) {
         return { name, root: best.root, bass, tpl: best.tpl, count: pcs.length };
     }
 
-    if (pcs.length === 2) {
-        const hi = notes.filter((n) => n % 12 !== bass).sort((a, b) => a - b)[0];
-        return { name: NOTE_NAMES[bass] + "-" + NOTE_NAMES[hi % 12], root: null, bass, tpl: null, count: 2 };
-    }
+    if (pcs.length === 2) return null;
     return { name: NOTE_NAMES[bass] + "?", root: null, bass, tpl: null, count: pcs.length };
 }
 
@@ -177,14 +176,20 @@ const GLYPHS = (() => {
         "+": ".....|..#..|..#..|#####|..#..|..#..|.....",
         "-": ".....|.....|.....|#####|.....|.....|.....",
         "?": ".###.|#...#|....#|...#.|..#..|.....|..#..",
+        "(": "...#.|..#..|.#...|.#...|.#...|..#..|...#.",
+        ")": ".#...|..#..|...#.|...#.|...#.|..#..|.#...",
     };
     const out = {};
     for (const ch of Object.keys(src)) out[ch] = src[ch].split("|");
     return out;
 })();
 
+const SPACE = 3;   /* a space is narrower than a letter */
+
 function bigWidth(text, scale) {
-    return text.length ? text.length * 6 * scale - scale : 0;
+    let w = 0;
+    for (const ch of text) w += (ch === " " ? SPACE : 6) * scale;
+    return Math.max(0, w - scale);
 }
 
 function drawBig(ctx, text, scale, cx, y) {
@@ -203,41 +208,50 @@ function drawBig(ctx, text, scale, cx, y) {
                 }
             }
         }
-        x += 6 * scale;
+        x += (ch === " " ? SPACE : 6) * scale;
     }
 }
 
-/* Largest scales that fit the band, name first, numeral second. */
-function pickScales(w, h, name, numeral) {
-    const top = 9;                                  /* the key line, one gap */
-    const options = numeral ? [[3, 2], [2, 2], [2, 1], [1, 1]] : [[3, 0], [2, 0], [1, 0]];
-    for (const [sn, sr] of options) {
-        const needH = top + 7 * sn + (sr ? 3 + 7 * sr : 0);
-        if (needH <= h && bigWidth(name, sn) <= w && (!sr || bigWidth(numeral, sr) <= w)) return [sn, sr];
+const KEY_LINE = 9;   /* height taken by the key line and one gap */
+
+const SCALE = 2;   /* one text size for every chord; only the line count changes */
+
+/* Lines to draw, each { text, scale }: "Am7 (vi7)" on one line when it fits,
+ * else the name with "(numeral)" below it. Only a band too short for two lines
+ * at SCALE, or a line wider than the screen, drops everything to scale 1. */
+function layout(w, h, name, numeral) {
+    const avail = h - KEY_LINE;
+    const wrapped = numeral ? "(" + numeral + ")" : null;
+    const one = numeral ? name + " " + wrapped : name;
+    const attempts = [SCALE, 1];
+    for (const s of attempts) {
+        if (7 * s <= avail && bigWidth(one, s) <= w) return [{ text: one, scale: s }];
+        if (wrapped && 14 * s + 3 <= avail && bigWidth(name, s) <= w && bigWidth(wrapped, s) <= w) {
+            return [{ text: name, scale: s }, { text: wrapped, scale: s }];
+        }
     }
-    return [1, numeral ? 1 : 0];
+    return [{ text: one, scale: 1 }];
 }
 
 function drawPage(ctx, { values }) {
     const w = ctx.width, h = ctx.height;
     const { root, scale } = parseKey(values && values.key);
-    const notes = parseNotes(values && values.chord_notes);
-    const chord = detectChord(notes);
+    const chord = detectChord(parseNotes(values && values.chord_notes));
     const numeral = chord ? romanNumeral(chord, root, scale) : null;
 
-    const keyText = root >= 0 ? NOTE_NAMES[root] + (scale ? " " + scale : "") : "no key";
-    ctx.print(0, 0, keyText, 1);
+    ctx.print(0, 0, root >= 0 ? NOTE_NAMES[root] + (scale ? " " + scale : "") : "no key", 1);
 
-    const name = chord ? chord.name : "-";
-    const [sn, sr] = pickScales(w, h, name, numeral);
-    const used = 7 * sn + (numeral ? 3 + 7 * sr : 0);
-    const y0 = 9 + Math.max(0, Math.floor((h - 9 - used) / 2));
-    drawBig(ctx, name, sn, w / 2, y0);
-    if (numeral) drawBig(ctx, numeral, sr, w / 2, y0 + 7 * sn + 3);
+    const lines = layout(w, h, chord ? chord.name : "-", numeral);
+    const used = lines.reduce((n, l) => n + 7 * l.scale, 0) + 3 * (lines.length - 1);
+    let y = KEY_LINE + Math.max(0, Math.floor((h - KEY_LINE - used) / 2));
+    for (const l of lines) {
+        drawBig(ctx, l.text, l.scale, w / 2, y);
+        y += 7 * l.scale + 3;
+    }
 }
 
 globalThis.canvas_overlay = { drawPage };
 
 if (typeof module !== "undefined") {
-    module.exports = { detectChord, romanNumeral, scaleIntervals, parseNotes, parseKey, bigWidth, drawPage };
+    module.exports = { detectChord, romanNumeral, scaleIntervals, parseNotes, parseKey, bigWidth, layout, drawPage };
 }
