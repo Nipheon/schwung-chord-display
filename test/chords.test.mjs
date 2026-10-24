@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
-const { detectChord, romanNumeral, parseNotes, parseKey, layout, header } = createRequire(import.meta.url)("../src/canvas.js");
+const { detectChord, romanNumeral, parseNotes, parseKey, layout, header, bigWidth } = createRequire(import.meta.url)("../src/canvas.js");
 
 const C = 0, A = 9;
 const name = (notes) => detectChord(notes).name;
@@ -107,18 +107,26 @@ test("no numeral without a key", () => {
     assert.equal(roman([60, 64, 67], -1, ""), null);
 });
 
-test("layout keeps one text size and only wraps long chords", () => {
-    const text = (l) => l.map((e) => e.text);
-    const sizes = (l) => l.map((e) => e.scale);
-    assert.deepEqual(layout(128, 40, "Am7", "vi7"), [{ text: "Am7 (vi7)", scale: 2 }]);
-    assert.deepEqual(layout(128, 40, "C/E", "I"), [{ text: "C/E (I)", scale: 2 }]);
-    assert.deepEqual(layout(128, 40, "Am7", null), [{ text: "Am7", scale: 2 }]);
-    const long = layout(128, 40, "Dbm7b5/G", "bii7b5");
-    assert.deepEqual(text(long), ["Dbm7b5/G", "(bii7b5)"]);
-    assert.deepEqual(sizes(long), [2, 2]);
-    assert.deepEqual(sizes(layout(128, 40, "Abmaj9/Eb", "bVIM9")), [2, 2]);
-    /* a band too short for two lines at the usual size drops to the small size */
-    assert.deepEqual(sizes(layout(128, 30, "Dbm7b5/G", "bii7b5")), [1]);
+test("layout: chord row and a smaller numeral row, same sizes for every chord", () => {
+    const sizes = (l) => l.map((e) => `${e.size.adv}`);
+    const one = layout(128, 40, "Am7", "vi7");
+    assert.deepEqual(one.map((e) => e.text), ["Am7", "vi7"]);
+    assert.deepEqual(sizes(one), ["12", "9"]);
+    assert.ok(one[1].y > one[0].y);
+    /* no numeral: just the chord row, same size */
+    const bare = layout(128, 40, "Am7", null);
+    assert.deepEqual(bare.map((e) => e.text), ["Am7"]);
+    assert.deepEqual(sizes(bare), ["12"]);
+    /* the longest names and numerals still fit on one row each, at the same sizes */
+    for (const [n, r] of [["Abmaj9/Eb", "bVIM9"], ["F#mMaj7/Eb", "bvM7"], ["Dbm7b5/G", "bii7b5"], ["GbmMaj7/Db", "bVII7sus4"]]) {
+        const l = layout(128, 40, n, r);
+        assert.deepEqual(sizes(l), ["12", "9"]);
+        for (const e of l) assert.ok(bigWidth(e.text, e.size) <= 128, `${e.text} is ${bigWidth(e.text, e.size)} px`);
+    }
+    /* both rows sit inside the band under the key line */
+    const l = layout(128, 40, "Am7", "vi7");
+    assert.ok(l[0].y >= 9);
+    assert.ok(l[1].y + 11 <= 40);
 });
 
 test("header: channel left, key and scale right, cut to fit", () => {

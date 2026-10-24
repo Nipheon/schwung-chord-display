@@ -5,10 +5,11 @@
  *
  *   channel       small, top left         CH 3  (CH * for all)
  *   key and scale small, top right        F# Phrygian
- *   chord         large, centred          Am7 (vi7)
+ *   chord         large, own row          Am7
+ *   numeral       smaller, own row        vi7
  *
- * The text shrinks for long names. Inversions show only as a slash in the
- * name; the numeral ignores the bass. A single note or a plain interval is
+ * Both rows keep one size for every chord. Inversions show only as a slash in
+ * the name; the numeral ignores the bass. A single note or a plain interval is
  * not a chord and clears the display (shown as "-").
  */
 
@@ -197,31 +198,36 @@ const GLYPHS = (() => {
     return out;
 })();
 
-const SPACE = 3;   /* a space is narrower than a letter */
+/* Glyph sizes: pixel widths of the 5 columns and 7 rows, the advance per
+ * character, and the width of a space. The numeral's 1.5x doubles every other
+ * pixel, since the font only scales in whole steps. */
+const SIZE_NAME = { cols: [2, 2, 2, 2, 2], rows: [2, 2, 2, 2, 2, 2, 2], adv: 12, space: 6 };
+const SIZE_NUMERAL = { cols: [2, 1, 2, 1, 2], rows: [2, 1, 2, 1, 2, 1, 2], adv: 9, space: 5 };
 
-function bigWidth(text, scale) {
+const sum = (a) => a.reduce((n, v) => n + v, 0);
+
+function bigWidth(text, size) {
     let w = 0;
-    for (const ch of text) w += (ch === " " ? SPACE : 6) * scale;
-    return Math.max(0, w - scale);
+    for (const ch of text) w += ch === " " ? size.space : size.adv;
+    return Math.max(0, w - (size.adv - sum(size.cols)));
 }
 
-function drawBig(ctx, text, scale, cx, y) {
-    let x = Math.round(cx - bigWidth(text, scale) / 2);
+function drawBig(ctx, text, size, cx, y) {
+    let x = Math.round(cx - bigWidth(text, size) / 2);
     for (const ch of text) {
         const rows = GLYPHS[ch];
         if (rows) {
+            let py = y;
             for (let gy = 0; gy < 7; gy++) {
-                let gx = 0;
-                while (gx < 5) {
-                    if (rows[gy][gx] !== "#") { gx++; continue; }
-                    let run = gx;
-                    while (run < 5 && rows[gy][run] === "#") run++;
-                    ctx.fillRect(x + gx * scale, y + gy * scale, (run - gx) * scale, scale, 1);
-                    gx = run;
+                let px = x;
+                for (let gx = 0; gx < 5; gx++) {
+                    if (rows[gy][gx] === "#") ctx.fillRect(px, py, size.cols[gx], size.rows[gy], 1);
+                    px += size.cols[gx];
                 }
+                py += size.rows[gy];
             }
         }
-        x += (ch === " " ? SPACE : 6) * scale;
+        x += ch === " " ? size.space : size.adv;
     }
 }
 
@@ -239,23 +245,19 @@ function header(values, w, widthOf) {
 
 const KEY_LINE = 9;   /* height taken by the key line and one gap */
 
-const SCALE = 2;   /* one text size for every chord; only the line count changes */
+const ROW_GAP = 3;
 
-/* Lines to draw, each { text, scale }: "Am7 (vi7)" on one line when it fits,
- * else the name with "(numeral)" below it. Only a band too short for two lines
- * at SCALE, or a line wider than the screen, drops everything to scale 1. */
+/* The rows to draw, each { text, size, y }, centred in the band under the key
+ * line. The name never wraps or shrinks: the longest is about ten characters,
+ * which is 118 px at this size. */
 function layout(w, h, name, numeral) {
-    const avail = h - KEY_LINE;
-    const wrapped = numeral ? "(" + numeral + ")" : null;
-    const one = numeral ? name + " " + wrapped : name;
-    const attempts = [SCALE, 1];
-    for (const s of attempts) {
-        if (7 * s <= avail && bigWidth(one, s) <= w) return [{ text: one, scale: s }];
-        if (wrapped && 14 * s + 3 <= avail && bigWidth(name, s) <= w && bigWidth(wrapped, s) <= w) {
-            return [{ text: name, scale: s }, { text: wrapped, scale: s }];
-        }
-    }
-    return [{ text: one, scale: 1 }];
+    const nameH = sum(SIZE_NAME.rows);
+    const numH = numeral ? sum(SIZE_NUMERAL.rows) : 0;
+    const used = nameH + (numeral ? ROW_GAP + numH : 0);
+    const top = KEY_LINE + Math.max(0, Math.floor((h - KEY_LINE - used) / 2));
+    const rows = [{ text: name, size: SIZE_NAME, y: top }];
+    if (numeral) rows.push({ text: numeral, size: SIZE_NUMERAL, y: top + nameH + ROW_GAP });
+    return rows;
 }
 
 function drawPage(ctx, { values }) {
@@ -269,13 +271,7 @@ function drawPage(ctx, { values }) {
     ctx.print(0, 0, head.left, 1);
     ctx.print(w - widthOf(head.right), 0, head.right, 1);
 
-    const lines = layout(w, h, chord ? chord.name : "-", numeral);
-    const used = lines.reduce((n, l) => n + 7 * l.scale, 0) + 3 * (lines.length - 1);
-    let y = KEY_LINE + Math.max(0, Math.floor((h - KEY_LINE - used) / 2));
-    for (const l of lines) {
-        drawBig(ctx, l.text, l.scale, w / 2, y);
-        y += 7 * l.scale + 3;
-    }
+    for (const r of layout(w, h, chord ? chord.name : "-", numeral)) drawBig(ctx, r.text, r.size, w / 2, r.y);
 }
 
 globalThis.canvas_overlay = { drawPage };
