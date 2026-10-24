@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
-const { detectChord, romanNumeral, parseNotes, parseKey, layout } = createRequire(import.meta.url)("../src/canvas.js");
+const { detectChord, romanNumeral, parseNotes, parseKey, layout, header } = createRequire(import.meta.url)("../src/canvas.js");
 
 const C = 0, A = 9;
 const name = (notes) => detectChord(notes).name;
@@ -94,6 +94,17 @@ test("layout keeps one text size and only wraps long chords", () => {
     assert.deepEqual(sizes(layout(128, 40, "Abmaj9/Eb", "bVIM9")), [2, 2]);
     /* a band too short for two lines at the usual size drops to the small size */
     assert.deepEqual(sizes(layout(128, 30, "Dbm7b5/G", "bii7b5")), [1]);
+});
+
+test("header: channel left, key and scale right, cut to fit", () => {
+    const six = (t) => 6 * t.length;
+    assert.deepEqual(header({ listen: "3", key: "6|Phrygian" }, 128, six), { left: "Ch 3", right: "F# Phrygian" });
+    assert.deepEqual(header({ listen: "0", key: "0|Major" }, 128, six), { left: "All", right: "C Major" });
+    assert.deepEqual(header({ listen: "12", key: "-1|" }, 128, six), { left: "Ch 12", right: "no key" });
+    const cut = header({ listen: "3", key: "6|Whole-half Diminished" }, 128, six);
+    assert.ok(six(cut.left) + 6 + six(cut.right) <= 128);
+    assert.ok(cut.right.startsWith("F# Whole"));
+    assert.equal(header({ key: "0|Major" }, 128, six).left, "");
 });
 
 test("parses what the DSP publishes", () => {

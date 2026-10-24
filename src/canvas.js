@@ -3,7 +3,8 @@
  * ("chord_notes") and Move's root note and scale ("key"); everything else is
  * here: naming the chord, the roman numeral, and drawing both.
  *
- *   key           small, top left         C Major
+ *   channel       small, top left         Ch 3
+ *   key and scale small, top right        F# Phrygian
  *   chord         large, centred          Am7 (vi7)
  *
  * The text shrinks for long names. Inversions show only as a slash in the
@@ -212,6 +213,18 @@ function drawBig(ctx, text, scale, cx, y) {
     }
 }
 
+/* Top line: the channel being read on the left, the Set's key on the right.
+ * The key is cut to what is left of the width. widthOf measures a string. */
+function header(values, w, widthOf) {
+    const listen = Number(values && values.listen);
+    const left = values && values.listen === undefined ? "" : listen >= 1 ? "Ch " + listen : "All";
+    const { root, scale } = parseKey(values && values.key);
+    let right = root >= 0 ? NOTE_NAMES[root] + (scale ? " " + scale : "") : "no key";
+    const room = w - widthOf(left) - 6;
+    while (right.length > 1 && widthOf(right) > room) right = right.slice(0, -1);
+    return { left, right };
+}
+
 const KEY_LINE = 9;   /* height taken by the key line and one gap */
 
 const SCALE = 2;   /* one text size for every chord; only the line count changes */
@@ -239,7 +252,10 @@ function drawPage(ctx, { values }) {
     const chord = detectChord(parseNotes(values && values.chord_notes));
     const numeral = chord ? romanNumeral(chord, root, scale) : null;
 
-    ctx.print(0, 0, root >= 0 ? NOTE_NAMES[root] + (scale ? " " + scale : "") : "no key", 1);
+    const widthOf = (t) => (typeof ctx.textWidth === "function" ? ctx.textWidth(t) : 6 * t.length);
+    const head = header(values, w, widthOf);
+    ctx.print(0, 0, head.left, 1);
+    ctx.print(w - widthOf(head.right), 0, head.right, 1);
 
     const lines = layout(w, h, chord ? chord.name : "-", numeral);
     const used = lines.reduce((n, l) => n + 7 * l.scale, 0) + 3 * (lines.length - 1);
@@ -253,5 +269,5 @@ function drawPage(ctx, { values }) {
 globalThis.canvas_overlay = { drawPage };
 
 if (typeof module !== "undefined") {
-    module.exports = { detectChord, romanNumeral, scaleIntervals, parseNotes, parseKey, bigWidth, layout, drawPage };
+    module.exports = { detectChord, romanNumeral, scaleIntervals, parseNotes, parseKey, bigWidth, layout, header, drawPage };
 }

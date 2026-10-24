@@ -45,6 +45,7 @@ int main(void)
     assert(head_is(c, ""));
 
     /* Auto = the slot's own channel (3). Channel 2 is ignored, channel 3 counts. */
+    cd_get_param(c, "listen", buf, sizeof buf); assert(strcmp(buf, "3") == 0);
     chord(c, 2, 60, 64, 67);
     assert(head_is(c, ""));
     chord(c, 3, 48, 52, 55);
@@ -79,7 +80,9 @@ int main(void)
     assert(head_is(c, "62,65,69"));
     off(c, 2, 62); off(c, 2, 65); off(c, 2, 69);
     cd_get_param(c, "channel", buf, sizeof buf); assert(strcmp(buf, "2") == 0);
+    cd_get_param(c, "listen", buf, sizeof buf); assert(strcmp(buf, "2") == 0);
     cd_set_param(c, "channel", "Omni");
+    cd_get_param(c, "listen", buf, sizeof buf); assert(strcmp(buf, "0") == 0);
     chord(c, 9, 43, 47, 50);
     assert(head_is(c, "43,47,50"));
     off(c, 9, 43); off(c, 9, 47); off(c, 9, 50);

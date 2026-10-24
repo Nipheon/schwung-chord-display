@@ -26,7 +26,8 @@
               "show_value": false,
               "extra_keys": [
                 "chord_notes",
-                "key"
+                "key",
+                "listen"
               ]
             },
             {
@@ -67,6 +68,13 @@
               "key": "key",
               "name": "Key",
               "label": "Key",
+              "type": "string",
+              "access": "read"
+            },
+            {
+              "key": "listen",
+              "name": "Listen",
+              "label": "Listen",
               "type": "string",
               "access": "read"
             }
