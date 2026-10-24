@@ -34,6 +34,7 @@ ${CROSS_PREFIX}gcc -O2 -shared -fPIC \
 # cat, not cp: avoids ExtFS deallocation issues with Docker mounts
 cat src/module.json > dist/chord-display/module.json
 cat src/canvas.js > dist/chord-display/canvas.js
+cat src/help.json > dist/chord-display/help.json
 cat build/chord-display.so > dist/chord-display/chord-display.so
 chmod +x dist/chord-display/chord-display.so
 

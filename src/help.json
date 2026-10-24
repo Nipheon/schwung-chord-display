@@ -1,0 +1,66 @@
+{
+  "title": "Chord Display",
+  "children": [
+    {
+      "title": "Overview",
+      "lines": [
+        "Shows the chord",
+        "you play, or a clip",
+        "plays, with its",
+        "roman numeral in the",
+        "Set's key.",
+        "",
+        "Audio and MIDI pass",
+        "through untouched.",
+        "",
+        "A single note, or two",
+        "notes that are not a",
+        "power chord, clears",
+        "the display. The last",
+        "chord stays until the",
+        "next one."
+      ]
+    },
+    {
+      "title": "Channel",
+      "lines": [
+        "Which MIDI channel",
+        "is read for chords.",
+        "",
+        "Auto: the slot's own",
+        "channel.",
+        "1-16: that channel.",
+        "Omni: every channel.",
+        "",
+        "Put it on the bass",
+        "slot and pick the pad",
+        "track's channel to",
+        "see its chords while",
+        "you edit the bass.",
+        "",
+        "Set each track's",
+        "MIDI Out to a channel",
+        "(Shift + Track)."
+      ]
+    },
+    {
+      "title": "Reading",
+      "lines": [
+        "Top left: the channel",
+        "read, CH * for all.",
+        "Top right: the Set's",
+        "key and scale.",
+        "",
+        "Chord (Numeral):",
+        "Am7 (vi7).",
+        "Inversions show a",
+        "slash, C/E; the",
+        "numeral ignores the",
+        "bass note.",
+        "",
+        "Notes outside the",
+        "scale get b or #."
+      ]
+    }
+  ]
+}
