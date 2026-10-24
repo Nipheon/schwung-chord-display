@@ -48,3 +48,8 @@ Needs Schwung 1.7.3 or newer (`move_info.h` for the key).
 - [Chordism](https://github.com/charlesvestal/schwung-chordism) and [Impressive Chords](https://github.com/mestela/schwung-impressive-chords) were looked at for comparison; nothing was taken from them.
 
 Copied and adapted parts are listed with their license in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+## AI disclosure
+
+This module was written with the help of AI: Claude (Anthropic, model Claude Sonnet 5.5).
+The author reviews the results and directs the project.
