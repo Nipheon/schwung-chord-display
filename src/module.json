@@ -2,7 +2,7 @@
   "id": "chord-display",
   "name": "Chord Display",
   "abbrev": "CD",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Shows the chord you play, or a clip plays, on any track, with its roman numeral in the Set's key",
   "author": "Nipheon",
   "license": "MIT",
