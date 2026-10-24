@@ -182,10 +182,13 @@ static const char *channel_name(int ch, char *tmp, size_t n)
     return tmp;
 }
 
+/* The host plans its pages from this, not from module.json: the chord page has
+ * to be declared here too, or it shows up as a plain cell. */
 static const char CHAIN_PARAMS_JSON[] =
     "["
+    "{\"key\":\"face\",\"name\":\"Chord\",\"type\":\"canvas\",\"canvas_script\":\"canvas.js\",\"as_page\":true,\"page_first\":true,\"show_value\":false,\"extra_keys\":[\"chord_notes\",\"key\"]},"
     "{\"key\":\"channel\",\"name\":\"Channel\",\"type\":\"enum\",\"options\":[\"Omni\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\",\"12\",\"13\",\"14\",\"15\",\"16\",\"Auto\"],\"default\":\"Auto\"},"
-    "{\"key\":\"chord_notes\",\"name\":\"Chord\",\"type\":\"string\",\"access\":\"read\"},"
+    "{\"key\":\"chord_notes\",\"name\":\"Notes\",\"type\":\"string\",\"access\":\"read\"},"
     "{\"key\":\"key\",\"name\":\"Key\",\"type\":\"string\",\"access\":\"read\"}"
     "]";
 
