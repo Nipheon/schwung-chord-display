@@ -171,6 +171,15 @@ int main(void)
     assert(head_is(d, "72"));                               /* not "60,64,72": nothing stuck */
     off(d, 1, 72);
 
+    /* messages too short to be a note, or without a status byte, are ignored */
+    { uint8_t m[2] = { 0x90, 60 }; cd_on_midi(d, m, 2, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    { uint8_t m[1] = { 0x90 }; cd_on_midi(d, m, 1, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    { uint8_t m[3] = { 60, 100, 0 }; cd_on_midi(d, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }   /* running status */
+    cd_on_midi(d, NULL, 3, MOVE_MIDI_SOURCE_FX_BROADCAST);
+    cd_on_midi(NULL, (const uint8_t[]){ 0x90, 60, 100 }, 3, MOVE_MIDI_SOURCE_FX_BROADCAST);
+    g_now += 40;
+    assert(ds->nheld == 0 && head_is(d, "72"));
+
     /* other messages are ignored without harm */
     { uint8_t m[3] = { 0xE0, 1, 64 }; cd_on_midi(d, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
     { uint8_t m[1] = { 0xF8 }; cd_on_midi(d, m, 1, MOVE_MIDI_SOURCE_FX_BROADCAST); }

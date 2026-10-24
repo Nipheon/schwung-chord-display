@@ -19,7 +19,9 @@ const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", 
  * Tier decides between readings of the same notes: triads beat 7ths and
  * sixths, which beat the bare fifth. Ties go to the reading rooted on the bass;
  * when neither root is the bass, PREFERRED breaks the tie (m7 over 6, sus4 over
- * sus2) so a shape gets the same name in every key. A bare fifth only counts
+ * sus2) so a shape gets the same name in every key; the last tie-break, for the
+ * tritone-symmetric 7b5 (C7b5 and F#7b5 are the same notes), is the reading
+ * with the third in the bass, the usual first inversion. A bare fifth only counts
  * with its root in the bass, so a fourth is not a power chord. */
 const PREFERRED = new Set(["m7", "m7b5", "sus4"]);
 
@@ -80,7 +82,9 @@ function detectChord(notes) {
         for (const tpl of TEMPLATES) {
             if (tpl.mask !== rel) continue;
             if (tpl.suffix === "5" && root !== bass) continue;
-            const score = tpl.tier * 100 + (root === bass ? 10 : 0) + tpl.ivs.length + tpl.pref;
+            const third = (bass - root + 12) % 12;
+            const score = tpl.tier * 100 + (root === bass ? 10 : 0) + tpl.ivs.length + tpl.pref +
+                (third === 3 || third === 4 ? 0.5 : 0);
             if (!best || score > best.score) best = { score, root, tpl };
         }
     }

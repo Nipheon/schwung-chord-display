@@ -35,6 +35,7 @@ It does not draw over Move's own screen; you see the chord on its page in the Sc
 ```
 node --test test/chords.test.mjs                                          # naming, numerals, layout
 cc -Isrc/dsp -o /tmp/dsp_test test/dsp_test.c -ldl && /tmp/dsp_test       # note latching, channels
+cc -Isrc/dsp -o /tmp/dsp_clock_test test/dsp_clock_test.c -ldl && /tmp/dsp_clock_test   # the real clock
 ./scripts/build.sh                                                        # Docker, writes dist/chord-display-module.tar.gz
 ```
 

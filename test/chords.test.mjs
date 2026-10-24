@@ -19,6 +19,17 @@ test("names triads and sevenths", () => {
     assert.equal(name([60, 62, 67]), "Csus2");
 });
 
+test("7b5 is named from the reading with the third in the bass", () => {
+    /* C7b5 and F#7b5 are the same four notes */
+    assert.equal(name([60, 64, 66, 70]), "C7b5");        /* root in the bass wins */
+    assert.equal(name([54, 60, 64, 70]), "F#7b5");
+    assert.equal(name([52, 58, 60, 66]), "C7b5/E");      /* E is the third of C */
+    assert.equal(name([58, 60, 64, 66]), "F#7b5/Bb");    /* Bb is the third of F#, not the seventh of C */
+    assert.equal(name([46, 48, 52, 54]), "F#7b5/Bb");
+    /* the same shape a tritone apart gets the same kind of name */
+    assert.equal(name([64, 70, 72, 78]), "C7b5/E");
+});
+
 test("altered sevenths and 6/9", () => {
     assert.equal(name([60, 64, 66, 70]), "C7b5");
     assert.equal(name([60, 64, 68, 70]), "C7#5");
