@@ -3,7 +3,7 @@
  * ("chord_notes") and Move's root note and scale ("key"); everything else is
  * here: naming the chord, the roman numeral, and drawing both.
  *
- *   channel       small, top left         Ch 3
+ *   channel       small, top left         CH 3  (CH * for all)
  *   key and scale small, top right        F# Phrygian
  *   chord         large, centred          Am7 (vi7)
  *
@@ -217,7 +217,7 @@ function drawBig(ctx, text, scale, cx, y) {
  * The key is cut to what is left of the width. widthOf measures a string. */
 function header(values, w, widthOf) {
     const listen = Number(values && values.listen);
-    const left = values && values.listen === undefined ? "" : listen >= 1 ? "Ch " + listen : "All";
+    const left = values && values.listen === undefined ? "" : listen >= 1 ? "CH " + listen : "CH *";
     const { root, scale } = parseKey(values && values.key);
     let right = root >= 0 ? NOTE_NAMES[root] + (scale ? " " + scale : "") : "no key";
     const room = w - widthOf(left) - 6;

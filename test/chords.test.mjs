@@ -98,9 +98,9 @@ test("layout keeps one text size and only wraps long chords", () => {
 
 test("header: channel left, key and scale right, cut to fit", () => {
     const six = (t) => 6 * t.length;
-    assert.deepEqual(header({ listen: "3", key: "6|Phrygian" }, 128, six), { left: "Ch 3", right: "F# Phrygian" });
-    assert.deepEqual(header({ listen: "0", key: "0|Major" }, 128, six), { left: "All", right: "C Major" });
-    assert.deepEqual(header({ listen: "12", key: "-1|" }, 128, six), { left: "Ch 12", right: "no key" });
+    assert.deepEqual(header({ listen: "3", key: "6|Phrygian" }, 128, six), { left: "CH 3", right: "F# Phrygian" });
+    assert.deepEqual(header({ listen: "0", key: "0|Major" }, 128, six), { left: "CH *", right: "C Major" });
+    assert.deepEqual(header({ listen: "12", key: "-1|" }, 128, six), { left: "CH 12", right: "no key" });
     const cut = header({ listen: "3", key: "6|Whole-half Diminished" }, 128, six);
     assert.ok(six(cut.left) + 6 + six(cut.right) <= 128);
     assert.ok(cut.right.startsWith("F# Whole"));
