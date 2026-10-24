@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
-const { detectChord, romanNumeral, parseNotes, parseKey, layout, header, bigWidth } = createRequire(import.meta.url)("../src/canvas.js");
+const { detectChord, romanNumeral, parseNotes, parseKey, layout, header, bigWidth, scaleIntervals } = createRequire(import.meta.url)("../src/canvas.js");
 
 const C = 0, A = 9;
 const name = (notes) => detectChord(notes).name;
@@ -96,6 +96,21 @@ test("roman numerals follow the scale", () => {
     assert.equal(roman([62, 65, 69], A, "Minor"), "iv");
     assert.equal(roman([58, 62, 65], A, "Minor"), "bII");
     assert.equal(roman([62, 65, 69], 2, "Dorian"), "i");
+});
+
+test("altered scale names keep their alteration", () => {
+    assert.deepEqual(scaleIntervals("Dorian #4"), [0, 2, 3, 6, 7, 9, 10]);
+    assert.deepEqual(scaleIntervals("dorian"), [0, 2, 3, 5, 7, 9, 10]);
+    assert.deepEqual(scaleIntervals("Phrygian Dominant"), [0, 1, 4, 5, 7, 8, 10]);
+    assert.equal(scaleIntervals("constructor"), null);
+    assert.equal(scaleIntervals("8-Tone Spanish"), null);
+    /* F# major in C Dorian #4 is the IV chord; in plain Dorian it is outside the scale */
+    assert.equal(roman([54, 58, 61], C, "Dorian #4"), "IV");
+    assert.equal(roman([54, 58, 61], C, "Dorian"), "bV");
+    /* Phrygian Dominant: G is degree V, Db degree II, E degree III */
+    assert.equal(roman([55, 59, 62], C, "Phrygian Dominant"), "V");
+    assert.equal(roman([49, 53, 56], C, "Phrygian Dominant"), "II");
+    assert.equal(roman([52, 56, 59], C, "Phrygian Dominant"), "III");
 });
 
 test("unknown scale falls back to chromatic numerals", () => {

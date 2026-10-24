@@ -97,8 +97,9 @@ function detectChord(notes) {
 const MAJOR_ROMAN = ["I", "bII", "II", "bIII", "III", "IV", "bV", "V", "bVI", "VI", "bVII", "VII"];
 const DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
-/* Move's scale names are matched case-insensitively; anything unknown, or not
- * seven notes, falls back to the chromatic numerals above. */
+/* Move uses Ableton Live's scale names, matched case-insensitively. Anything
+ * unknown, or not seven notes (pentatonics, 8-Tone Spanish, ...), falls back to
+ * the chromatic numerals above. */
 const SCALES = {
     "major": [0, 2, 4, 5, 7, 9, 11],
     "minor": [0, 2, 3, 5, 7, 8, 10],
@@ -111,11 +112,19 @@ const SCALES = {
     "harmonic minor": [0, 2, 3, 5, 7, 8, 11],
     "melodic minor": [0, 2, 3, 5, 7, 9, 11],
     "harmonic major": [0, 2, 4, 5, 7, 8, 11],
+    "dorian #4": [0, 2, 3, 6, 7, 9, 10],
+    "phrygian dominant": [0, 1, 4, 5, 7, 8, 10],
+    "lydian augmented": [0, 2, 4, 6, 8, 9, 11],
+    "lydian dominant": [0, 2, 4, 6, 7, 9, 10],
+    "super locrian": [0, 1, 3, 4, 6, 8, 10],
+    "bhairav": [0, 1, 4, 5, 7, 8, 11],
+    "hungarian minor": [0, 2, 3, 6, 7, 8, 11],
 };
 
 function scaleIntervals(name) {
-    const key = String(name || "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
-    return SCALES[key] || null;
+    /* Keep '#' and digits: "Dorian #4" is not Dorian. */
+    const key = String(name || "").toLowerCase().replace(/[^a-z0-9#]+/g, " ").trim();
+    return Object.prototype.hasOwnProperty.call(SCALES, key) ? SCALES[key] : null;
 }
 
 /* rootNote: 0-11 or -1 unknown. Returns null when there is nothing to show. */
