@@ -37,4 +37,13 @@ cc -Isrc/dsp -o /tmp/dsp_test test/dsp_test.c -ldl && /tmp/dsp_test       # note
 ./scripts/build.sh                                                        # Docker, writes dist/chord-display-module.tar.gz
 ```
 
-Needs Schwung 1.7.3 or newer (`move_info.h` for the key). The build scripts and the audio FX entry points follow [schwung-ducker](https://github.com/charlesvestal/schwung-ducker) (MIT).
+Needs Schwung 1.7.3 or newer (`move_info.h` for the key).
+
+## Credits
+
+- [Schwung](https://github.com/charlesvestal/schwung) (MIT, Charles Vestal): the three host headers in `src/dsp` are copied unchanged, and the host docs and source are what this module is built against.
+- [schwung-ducker](https://github.com/charlesvestal/schwung-ducker) (MIT, Charles Vestal): the build script, Dockerfile, release workflow and the audio FX entry points are adapted from it. Ducker also showed that an audio FX hears every MIDI channel.
+- [ChordDex](https://github.com/dony01001/ChordDex) (MIT, dony01001): the idea of naming a chord by matching the held notes against a table of chord shapes, preferring the reading rooted on the bass note and showing the bass as a slash (`C/E`). The chord table, scoring and code here are written from scratch; no code was copied.
+- [Chordism](https://github.com/charlesvestal/schwung-chordism) and [Impressive Chords](https://github.com/mestela/schwung-impressive-chords) were looked at for comparison; nothing was taken from them.
+
+Copied and adapted parts are listed with their license in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

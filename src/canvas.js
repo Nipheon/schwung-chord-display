@@ -16,7 +16,12 @@ const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", 
 
 /* [suffix, intervals from the root, tier, minor numeral, numeral suffix].
  * Tier decides between readings of the same notes: triads beat 7ths and
- * sixths, which beat the bare fifth. Ties go to the reading rooted on the bass. */
+ * sixths, which beat the bare fifth. Ties go to the reading rooted on the bass;
+ * when neither root is the bass, PREFERRED breaks the tie (m7 over 6, sus4 over
+ * sus2) so a shape gets the same name in every key. A bare fifth only counts
+ * with its root in the bass, so a fourth is not a power chord. */
+const PREFERRED = new Set(["m7", "m7b5", "sus4"]);
+
 const TEMPLATES = [
     ["", [0, 4, 7], 3, false, ""],
     ["m", [0, 3, 7], 3, true, ""],
@@ -34,13 +39,19 @@ const TEMPLATES = [
     ["6", [0, 4, 7, 9], 2, false, "6"],
     ["m6", [0, 3, 7, 9], 2, true, "6"],
     ["7sus4", [0, 5, 7, 10], 2, false, "7sus4"],
+    ["7b5", [0, 4, 6, 10], 2, false, "7b5"],
+    ["7#5", [0, 4, 8, 10], 2, false, "7#5"],
     ["add9", [0, 2, 4, 7], 2, false, "add9"],
     ["madd9", [0, 2, 3, 7], 2, true, "add9"],
     ["maj9", [0, 2, 4, 7, 11], 2, false, "M9"],
     ["9", [0, 2, 4, 7, 10], 2, false, "9"],
+    ["7b9", [0, 1, 4, 7, 10], 2, false, "7b9"],
+    ["7#9", [0, 3, 4, 7, 10], 2, false, "7#9"],
+    ["69", [0, 2, 4, 7, 9], 2, false, "69"],
     ["m9", [0, 2, 3, 7, 10], 2, true, "9"],
 ].map(([suffix, ivs, tier, minor, numeral]) => ({
     suffix, ivs, tier, minor, numeral,
+    pref: PREFERRED.has(suffix) ? 1 : 0,
     mask: ivs.reduce((m, i) => m | (1 << i), 0),
 }));
 
@@ -67,7 +78,8 @@ function detectChord(notes) {
         const rel = rotate(mask, root);
         for (const tpl of TEMPLATES) {
             if (tpl.mask !== rel) continue;
-            const score = tpl.tier * 100 + (root === bass ? 10 : 0) + tpl.ivs.length;
+            if (tpl.suffix === "5" && root !== bass) continue;
+            const score = tpl.tier * 100 + (root === bass ? 10 : 0) + tpl.ivs.length + tpl.pref;
             if (!best || score > best.score) best = { score, root, tpl };
         }
     }

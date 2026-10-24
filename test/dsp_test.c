@@ -107,13 +107,76 @@ int main(void)
     cd_set_param(c, "state", "{\"channel\":\"12\"}");
     cd_get_param(c, "channel", buf, sizeof buf); assert(strcmp(buf, "12") == 0);
 
-    /* all notes off forgets stuck notes; other messages are ignored without harm */
-    cd_set_param(c, "channel", "Omni");
-    on(c, 1, 60); on(c, 1, 64);
-    { uint8_t m[3] = { 0xB0, 123, 0 }; cd_on_midi(c, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
-    { uint8_t m[3] = { 0xE0, 1, 64 }; cd_on_midi(c, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
-    { uint8_t m[1] = { 0xF8 }; cd_on_midi(c, m, 1, MOVE_MIDI_SOURCE_FX_BROADCAST); }
-    assert(((chord_t *)c)->nheld == 0);
+    api->destroy_instance(c);
+
+    /* ---- a fresh instance, Auto on a slot that listens to channel 3 ---- */
+    g_recv = 2;
+    void *d = api->create_instance(NULL, NULL);
+    chord_t *ds = (chord_t *)d;
+
+    /* a chord built note by note, more than the settle window apart, grows */
+    on(d, 3, 60); g_now += 100; assert(head_is(d, "60"));
+    on(d, 3, 64); g_now += 100; assert(head_is(d, "60,64"));
+    on(d, 3, 67); g_now += 100; assert(head_is(d, "60,64,67"));
+
+    /* legato: a new chord of its own replaces the one still held, it is not merged */
+    on(d, 3, 65); g_now += 8; on(d, 3, 69); g_now += 8; on(d, 3, 72); g_now += 40;
+    assert(head_is(d, "65,69,72"));
+    /* the old notes are forgotten, so releasing them changes nothing */
+    off(d, 3, 60); off(d, 3, 64); off(d, 3, 67);
+    assert(ds->nheld == 3 && head_is(d, "65,69,72"));
+    /* a single note over the held chord adds to it */
+    on(d, 3, 77); g_now += 40; assert(head_is(d, "65,69,72,77"));
+    off(d, 3, 65); off(d, 3, 69); off(d, 3, 72); off(d, 3, 77);
+    assert(ds->nheld == 0);
+
+    /* changing the channel mid-chord must not leave stuck notes */
+    cd_set_param(d, "channel", "Auto");
+    chord(d, 3, 48, 52, 55); assert(head_is(d, "48,52,55"));
+    cd_set_param(d, "channel", "5");
+    off(d, 3, 48); off(d, 3, 52); off(d, 3, 55);           /* filtered out: channel 3 is no longer read */
+    assert(ds->nheld == 0);
+    chord(d, 5, 62, 65, 69); assert(head_is(d, "62,65,69"));
+    off(d, 5, 62); off(d, 5, 65); off(d, 5, 69);
+
+    /* the same for Auto following the slot to another channel */
+    cd_set_param(d, "channel", "Auto");
+    g_recv = 2;
+    on(d, 3, 60); g_now += 40;                              /* held on channel 3 */
+    g_recv = 3;                                             /* the slot now listens to channel 4 */
+    cd_get_param(d, "listen", buf, sizeof buf); assert(strcmp(buf, "4") == 0);
+    assert(ds->nheld == 0);
+    off(d, 3, 60);
+    chord(d, 4, 50, 53, 57); assert(head_is(d, "50,53,57"));
+    off(d, 4, 50); off(d, 4, 53); off(d, 4, 57);
+    g_recv = 2;
+
+    /* Omni keeps the same note number on two channels apart */
+    cd_set_param(d, "channel", "Omni");
+    on(d, 1, 60); on(d, 2, 60); assert(ds->nheld == 2);
+    off(d, 1, 60); assert(ds->nheld == 1);
+    off(d, 2, 60); assert(ds->nheld == 0);
+
+    /* velocity-0 note-on is a release */
+    on(d, 1, 61); assert(ds->nheld == 1);
+    midi(d, 0x90, 61, 0, MOVE_MIDI_SOURCE_FX_BROADCAST); assert(ds->nheld == 0);
+
+    /* all notes off: only the channel it arrives on, and the notes really are forgotten */
+    on(d, 1, 60); on(d, 2, 64); g_now += 40; assert(ds->nheld == 2);
+    { uint8_t m[3] = { 0xB1, 123, 0 }; cd_on_midi(d, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    assert(ds->nheld == 1);
+    { uint8_t m[3] = { 0xB0, 123, 0 }; cd_on_midi(d, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    assert(ds->nheld == 0);
+    on(d, 1, 72); g_now += 40;
+    assert(head_is(d, "72"));                               /* not "60,64,72": nothing stuck */
+    off(d, 1, 72);
+
+    /* other messages are ignored without harm */
+    { uint8_t m[3] = { 0xE0, 1, 64 }; cd_on_midi(d, m, 3, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    { uint8_t m[1] = { 0xF8 }; cd_on_midi(d, m, 1, MOVE_MIDI_SOURCE_FX_BROADCAST); }
+    assert(ds->nheld == 0);
+
+    c = d;
 
     /* audio is left untouched */
     { int16_t a[8] = { 1, -2, 3, -4, 5, -6, 7, -8 }, b[8]; memcpy(b, a, sizeof a);

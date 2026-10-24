@@ -19,6 +19,17 @@ test("names triads and sevenths", () => {
     assert.equal(name([60, 62, 67]), "Csus2");
 });
 
+test("altered sevenths and 6/9", () => {
+    assert.equal(name([60, 64, 66, 70]), "C7b5");
+    assert.equal(name([60, 64, 68, 70]), "C7#5");
+    assert.equal(name([60, 61, 64, 67, 70]), "C7b9");
+    assert.equal(name([60, 63, 64, 67, 70]), "C7#9");
+    assert.equal(name([60, 62, 64, 67, 69]), "C69");
+    assert.equal(roman([55, 56, 59, 62, 65], C, "Major"), "V7b9");
+    assert.equal(roman([55, 59, 61, 65], C, "Major"), "V7b5");
+    assert.equal(name([43, 47, 51, 53]), "G7#5");
+});
+
 test("same notes read from the bass", () => {
     assert.equal(name([60, 64, 67, 69]), "C6");
     assert.equal(name([57, 60, 64, 67]), "Am7");
@@ -35,9 +46,23 @@ test("octave doubling and note order do not matter", () => {
     assert.equal(name([72, 48, 64, 55]), "C");
 });
 
+test("equal readings are named the same in every key", () => {
+    assert.equal(name([64, 67, 69, 72]), "Am7/E");
+    assert.equal(name([69, 72, 74, 77]), "Dm7/A");
+    assert.equal(name([62, 67, 72]), "Gsus4/D");
+    assert.equal(name([54, 58, 60, 63]), "Cm7b5/F#");
+    /* with a root in the bass, that reading still wins */
+    assert.equal(name([60, 64, 67, 69]), "C6");
+    assert.equal(name([60, 62, 67]), "Csus2");
+    assert.equal(name([51, 55, 58, 60]), "Eb6");
+});
+
 test("a power chord is a chord; single notes and other intervals are not", () => {
     assert.equal(name([60, 67]), "C5");
+    assert.equal(name([65, 72]), "F5");
     assert.equal(roman([60, 67], C, "Major"), "I5");
+    assert.equal(detectChord([60, 65]), null);    /* a fourth is not a power chord */
+    assert.equal(detectChord([55, 60]), null);
     assert.equal(detectChord([]), null);
     assert.equal(detectChord([60]), null);
     assert.equal(detectChord([60, 72]), null);

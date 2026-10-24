@@ -14,8 +14,10 @@
  *   listen       "<ch>"              the channel actually read, 1-16, 0 = all
  *
  * Latching: a note-on opens a short settle window so pad presses that are not
- * perfectly simultaneous count as one chord. When it closes, the chord is
- * whatever is held (plus notes tapped inside the window). Releasing notes one
+ * perfectly simultaneous count as one chord. When it closes, the chord is the
+ * notes pressed in that window if they form a chord of their own (3 or more
+ * notes: a new chord played over a held one replaces it), otherwise whatever
+ * is held plus the window (a chord built up note by note). Releasing notes one
  * by one does not change it; the chord stays until the next one.
  *
  * Time comes from the wall clock, not from process_block: an idle slot does not
@@ -39,10 +41,11 @@
 #define CH_AUTO 17      /* option index after Omni, 1-16 */
 
 typedef struct {
-    uint8_t held[128];
+    uint8_t held[16][128];  /* per channel: Omni must not merge two tracks' notes */
     uint8_t window[128];    /* pressed since the last latch */
     uint8_t latched[128];
-    int nheld;
+    int nheld;              /* entries set in held[][] */
+    int last_listen;        /* the channel read last time, -1 before the first read */
     uint32_t gen;           /* bumps whenever the latched chord changes */
     int channel;            /* CH_OMNI, 1-16, or CH_AUTO */
     double settle_at;       /* < 0 = no window open */
@@ -70,6 +73,7 @@ static void *cd_create(const char *module_dir, const char *config_json)
     if (!c) return NULL;
     c->channel = CH_AUTO;
     c->settle_at = -1;
+    c->last_listen = -1;
     if (g_host) {
         /* Each slot's init hands over its own host api and create_instance runs
          * right after it, so this is the owning slot's context. */
@@ -87,9 +91,27 @@ static void cd_destroy(void *instance)
     free(instance);
 }
 
+static int is_held(const chord_t *c, int note)
+{
+    for (int ch = 0; ch < 16; ch++) if (c->held[ch][note]) return 1;
+    return 0;
+}
+
 static void latch(chord_t *c)
 {
-    for (int i = 0; i < 128; i++) c->latched[i] = (uint8_t)(c->held[i] || c->window[i]);
+    int in_window = 0;
+    for (int i = 0; i < 128; i++) in_window += c->window[i];
+
+    if (in_window >= 3) {
+        /* A chord of its own: it replaces the old one, which may still be down.
+         * Forget the old notes, so their later releases are ignored. */
+        for (int ch = 0; ch < 16; ch++)
+            for (int i = 0; i < 128; i++)
+                if (c->held[ch][i] && !c->window[i]) { c->held[ch][i] = 0; c->nheld--; }
+        for (int i = 0; i < 128; i++) c->latched[i] = c->window[i];
+    } else {
+        for (int i = 0; i < 128; i++) c->latched[i] = (uint8_t)(c->window[i] || is_held(c, i));
+    }
     memset(c->window, 0, sizeof c->window);
     c->gen++;
 }
@@ -114,6 +136,28 @@ static int listen_channel(chord_t *c)
     return CH_OMNI;
 }
 
+/* Forget the notes being tracked; the latched chord stays. */
+static void reset_input(chord_t *c)
+{
+    memset(c->held, 0, sizeof c->held);
+    memset(c->window, 0, sizeof c->window);
+    c->nheld = 0;
+    c->settle_at = -1;
+}
+
+/* The channel being read. When it changes (the setting, or Auto following the
+ * slot), the releases of notes still held on the old one would be filtered out
+ * and the notes would stay stuck, so the tracked notes are dropped. */
+static int check_listen(chord_t *c)
+{
+    int want = listen_channel(c);
+    if (want != c->last_listen) {
+        if (c->last_listen != -1) reset_input(c);
+        c->last_listen = want;
+    }
+    return want;
+}
+
 static void cd_on_midi(void *instance, const uint8_t *msg, int len, int source)
 {
     chord_t *c = (chord_t *)instance;
@@ -124,21 +168,22 @@ static void cd_on_midi(void *instance, const uint8_t *msg, int len, int source)
 
     uint8_t st = msg[0] & 0xF0;
     if (st != 0x90 && st != 0x80 && st != 0xB0) return;
-    int want = listen_channel(c);
-    if (want != CH_OMNI && (msg[0] & 0x0F) != want - 1) return;
+    int want = check_listen(c);
+    int ch = msg[0] & 0x0F;
+    if (want != CH_OMNI && ch != want - 1) return;
 
     settle_if_due(c);
     if (st == 0x90 && msg[2] > 0) {
         int note = msg[1] & 0x7F;
-        if (!c->held[note]) { c->held[note] = 1; c->nheld++; }
+        if (!c->held[ch][note]) { c->held[ch][note] = 1; c->nheld++; }
         c->window[note] = 1;
         c->settle_at = CD_NOW_MS() + SETTLE_MS;
     } else if (st == 0x80 || st == 0x90) {
         int note = msg[1] & 0x7F;
-        if (c->held[note]) { c->held[note] = 0; c->nheld--; }
+        if (c->held[ch][note]) { c->held[ch][note] = 0; c->nheld--; }
     } else if (msg[1] == 123 || msg[1] == 120) {
-        memset(c->held, 0, sizeof c->held);     /* all notes off: forget stuck notes */
-        c->nheld = 0;
+        /* all notes off on this channel: forget its stuck notes */
+        for (int i = 0; i < 128; i++) if (c->held[ch][i]) { c->held[ch][i] = 0; c->nheld--; }
     }
 }
 
@@ -162,6 +207,7 @@ static void cd_set_param(void *instance, const char *key, const char *val)
     if (!c || !key || !val) return;
     if (strcmp(key, "channel") == 0) {
         c->channel = parse_channel(val);
+        check_listen(c);
     } else if (strcmp(key, "state") == 0) {
         const char *p = strstr(val, "\"channel\"");
         if (p && (p = strchr(p, ':'))) {
@@ -171,6 +217,7 @@ static void cd_set_param(void *instance, const char *key, const char *val)
             while (n < sizeof tok - 1 && ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'z'))) tok[n++] = *p++;
             tok[n] = '\0';
             c->channel = parse_channel(tok);
+            check_listen(c);
         }
     }
 }
@@ -226,7 +273,7 @@ static int cd_get_param(void *instance, const char *key, char *buf, int buf_len)
         return snprintf(buf, buf_len, "%d|%s", root, scale);
     }
 
-    if (strcmp(key, "listen") == 0) return snprintf(buf, buf_len, "%d", listen_channel(c));
+    if (strcmp(key, "listen") == 0) return snprintf(buf, buf_len, "%d", check_listen(c));
 
     if (strcmp(key, "state") == 0) return snprintf(buf, buf_len, "{\"channel\":\"%s\"}", channel_name(c->channel, tmp, sizeof tmp));
 
