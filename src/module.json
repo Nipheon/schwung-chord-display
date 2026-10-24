@@ -1,0 +1,29 @@
+{
+  "id": "chord-display",
+  "name": "Chord Display",
+  "abbrev": "CD",
+  "version": "0.1.0",
+  "description": "Shows the chord you play, or a clip plays, with its roman numeral in the Set's key",
+  "author": "Nipheon",
+  "license": "MIT",
+  "dsp": "dsp.so",
+  "api_version": 2,
+  "capabilities": {
+    "chainable": true,
+    "component_type": "midi_fx",
+    "ui_hierarchy": {
+      "levels": {
+        "root": {
+          "name": "Chord Display",
+          "params": [
+            { "key": "face", "name": "Chord", "type": "canvas", "canvas_script": "canvas.js", "as_page": true, "page_first": true, "show_value": false, "extra_keys": ["chord_notes", "key"] },
+            { "key": "hold", "name": "Hold", "type": "int", "min": 0, "max": 5000, "step": 50, "default": 1000, "unit": "ms" },
+            { "key": "chord_notes", "name": "Notes", "type": "string", "access": "read" },
+            { "key": "key", "name": "Key", "type": "string", "access": "read" }
+          ],
+          "knobs": ["hold"]
+        }
+      }
+    }
+  }
+}

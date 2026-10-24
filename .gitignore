@@ -1,0 +1,4 @@
+build/
+dist/
+.scratch/
+.DS_Store
