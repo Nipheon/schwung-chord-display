@@ -39,7 +39,7 @@ cc -Isrc/dsp -o /tmp/dsp_clock_test test/dsp_clock_test.c -ldl && /tmp/dsp_clock
 ./scripts/build.sh                                                        # Docker, writes dist/chord-display-module.tar.gz
 ```
 
-Needs Schwung 1.7.3 or newer (`move_info.h` for the key).
+Needs Schwung 1.6.2 or newer, tested on 1.7.3: 1.6.0 added `move_info.h` (the key) and 1.6.2 lets the chord page come first.
 
 ## Credits
 
@@ -52,5 +52,5 @@ Copied and adapted parts are listed with their license in [THIRD_PARTY_LICENSES.
 
 ## AI disclosure
 
-This module was written with the help of AI: Claude (Anthropic, model Claude Sonnet 5.5).
+This module was written with the help of AI: Claude (Anthropic; models Claude Opus 5.5 and Claude Sonnet 5.5).
 The author reviews the results and directs the project.
