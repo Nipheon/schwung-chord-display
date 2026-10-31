@@ -8,9 +8,10 @@
  *   chord         large, own row          Am7
  *   numeral       smaller, own row        vi7
  *
- * Both rows keep one size for every chord. Inversions show only as a slash in
- * the name; the numeral ignores the bass. A single note or a plain interval is
- * not a chord and clears the display (shown as "-").
+ * Both rows keep one size for every chord. Inversions show as a slash in both
+ * rows: the bass note in the name (C/E), its scale degree in the numeral (I/3).
+ * A single note or a plain interval is not a chord and clears the display
+ * (shown as "-").
  */
 
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
@@ -131,26 +132,34 @@ function scaleIntervals(name) {
     return Object.prototype.hasOwnProperty.call(SCALES, key) ? SCALES[key] : null;
 }
 
-/* rootNote: 0-11 or -1 unknown. Returns null when there is nothing to show. */
-function romanNumeral(chord, rootNote, scaleName) {
-    if (!chord || !chord.tpl || !(rootNote >= 0)) return null;
-    const d = (chord.root - rootNote + 12) % 12;
-    const scale = scaleIntervals(scaleName);
-    let prefix = "", base;
+/* d: semitones above the key's root. Returns { prefix, idx } with idx 0-6, the
+ * scale degree, and b or # for notes outside the scale (flat preferred). */
+function degree(d, scale) {
     if (scale) {
         const idx = scale.indexOf(d);
         const above = scale.indexOf(d + 1);
         const below = scale.indexOf(d - 1);
-        if (idx >= 0) base = DEGREES[idx];
-        else if (above >= 0 && d + 1 < 12) { prefix = "b"; base = DEGREES[above]; }
-        else if (below >= 0) { prefix = "#"; base = DEGREES[below]; }
+        if (idx >= 0) return { prefix: "", idx };
+        if (above >= 0 && d + 1 < 12) return { prefix: "b", idx: above };
+        if (below >= 0) return { prefix: "#", idx: below };
     }
-    if (!base) {
-        const m = MAJOR_ROMAN[d].match(/^([b#]?)(.+)$/);
-        prefix = m[1];
-        base = m[2];
+    const m = MAJOR_ROMAN[d].match(/^([b#]?)(.+)$/);
+    return { prefix: m[1], idx: DEGREES.indexOf(m[2]) };
+}
+
+/* rootNote: 0-11 or -1 unknown. Returns null when there is nothing to show.
+ * An inversion adds the bass as a scale degree: C/E in C Major is I/3. */
+function romanNumeral(chord, rootNote, scaleName) {
+    if (!chord || !chord.tpl || !(rootNote >= 0)) return null;
+    const scale = scaleIntervals(scaleName);
+    const r = degree((chord.root - rootNote + 12) % 12, scale);
+    const base = DEGREES[r.idx];
+    let text = r.prefix + (chord.tpl.minor ? base.toLowerCase() : base) + chord.tpl.numeral;
+    if (chord.bass !== chord.root) {
+        const b = degree((chord.bass - rootNote + 12) % 12, scale);
+        text += "/" + b.prefix + (b.idx + 1);
     }
-    return prefix + (chord.tpl.minor ? base.toLowerCase() : base) + chord.tpl.numeral;
+    return text;
 }
 
 function parseNotes(raw) {
@@ -215,7 +224,11 @@ const GLYPHS = (() => {
  * character, and the width of a space. The numeral's 1.5x doubles every other
  * pixel, since the font only scales in whole steps. */
 const SIZE_NAME = { cols: [2, 2, 2, 2, 2], rows: [2, 2, 2, 2, 2, 2, 2], adv: 12, space: 6 };
-const SIZE_NUMERAL = { cols: [2, 1, 2, 1, 2], rows: [2, 1, 2, 1, 2, 1, 2], adv: 9, space: 5 };
+const SIZE_NUMERAL = {
+    cols: [2, 1, 2, 1, 2], rows: [2, 1, 2, 1, 2, 1, 2], adv: 9, space: 5,
+    /* the plain slash steps unevenly when every other pixel is doubled */
+    glyphs: { "/": "....#|...#.|...#.|..#..|.#...|.#...|#....".split("|") },
+};
 
 const sum = (a) => a.reduce((n, v) => n + v, 0);
 
@@ -228,7 +241,7 @@ function bigWidth(text, size) {
 function drawBig(ctx, text, size, cx, y) {
     let x = Math.round(cx - bigWidth(text, size) / 2);
     for (const ch of text) {
-        const rows = GLYPHS[ch];
+        const rows = (size.glyphs && size.glyphs[ch]) || GLYPHS[ch];
         if (rows) {
             let py = y;
             for (let gy = 0; gy < 7; gy++) {

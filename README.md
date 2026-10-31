@@ -26,7 +26,7 @@ It does not draw over Move's own screen; you see the chord on its page in the Sc
 
 - Audio FX receive the notes of every channel with their channel number, which is why this is an audio FX and not a MIDI FX.
 - Pad presses on Move's own surface can reach audio FX as pad numbers (68-99) on channel 1. Prefer a channel other than 1 for the chord track.
-- Inversions show a slash (`C/E`); the numeral ignores the bass note.
+- Inversions show a slash in both rows: the bass note in the name (`C/E`), its scale degree in the numeral (`I/3`).
 - The numeral uses the Set's root note and scale, read from Move. Notes outside the scale get `b` or `#`. Unknown scales use chromatic numerals; with no key, only the name is shown.
 - The chord and its numeral each get a row, in two fixed sizes (the numeral is smaller); long names never shrink or wrap.
 

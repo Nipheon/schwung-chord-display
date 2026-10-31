@@ -96,9 +96,17 @@ test("roman numerals in C Major", () => {
     assert.equal(roman([56, 60, 63], C, "Major"), "bVI");
 });
 
-test("inversion does not change the numeral", () => {
-    assert.equal(roman([52, 55, 60], C, "Major"), "I");
-    assert.equal(roman([53, 55, 59, 62], C, "Major"), "V7");
+test("inversion adds the bass as a scale degree", () => {
+    assert.equal(roman([52, 55, 60], C, "Major"), "I/3");
+    assert.equal(roman([53, 55, 59, 62], C, "Major"), "V7/4");
+    assert.equal(roman([48, 57, 64], C, "Major"), "vi/1");
+    assert.equal(roman([50, 58, 62, 65], C, "Major"), "bVII/2");
+    /* a bass outside the scale gets b or #, by the same rule as the root */
+    assert.equal(roman([54, 62, 69], C, "Major"), "II/b5");
+    /* degrees follow the scale, or fall back to chromatic ones */
+    assert.equal(roman([48, 57, 64], 2, "Dorian"), "v/7");
+    assert.equal(roman([52, 55, 60], C, "Hirajoshi"), "I/3");
+    assert.equal(roman([54, 62, 69], C, ""), "II/b5");
 });
 
 test("roman numerals follow the scale", () => {
@@ -144,7 +152,7 @@ test("layout: chord row and a smaller numeral row, same sizes for every chord", 
     assert.deepEqual(bare.map((e) => e.text), ["Am7"]);
     assert.deepEqual(sizes(bare), ["12"]);
     /* the longest names and numerals still fit on one row each, at the same sizes */
-    for (const [n, r] of [["Abmaj9/Eb", "bVIM9"], ["F#mMaj7/Eb", "bvM7"], ["Dbm7b5/G", "bii7b5"], ["GbmMaj7/Db", "bVII7sus4"]]) {
+    for (const [n, r] of [["Abmaj9/Eb", "bVIM9"], ["F#mMaj7/Eb", "bvM7"], ["Dbm7b5/G", "bii7b5"], ["GbmMaj7/Db", "bVII7sus4"], ["Ab7sus4/Db", "bIII7sus4/b6"]]) {
         const l = layout(128, 40, n, r);
         assert.deepEqual(sizes(l), ["12", "9"]);
         for (const e of l) assert.ok(bigWidth(e.text, e.size) <= 128, `${e.text} is ${bigWidth(e.text, e.size)} px`);
