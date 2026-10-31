@@ -147,6 +147,29 @@ function degree(d, scale) {
     return { prefix: m[1], idx: DEGREES.indexOf(m[2]) };
 }
 
+const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+
+/* Steps from the chord root to each interval, as letters: a major or minor
+ * third is two steps up, a b5 or #5 four. The #9 of 7#9 is one step, not two.
+ * (dim7 needs no entry: every note can be its root, so its bass is the root.) */
+const STEP = [0, 1, 1, 2, 2, 3, 4, 4, 4, 5, 6, 6];
+const STEP_OVERRIDE = { "7#9": { 3: 1 } };
+
+/* The bass as a scale degree, named from its place in the chord rather than
+ * flat-first, so the third of C stays a 3rd: C/E is I/3 in C Major, I/#3 in
+ * C Minor, and D/F# is II/#4. A double sharp or flat falls back to degree(). */
+function bassDegree(chord, rootNote, scale, rootIdx) {
+    const iv = (chord.bass - chord.root + 12) % 12;
+    const over = STEP_OVERRIDE[chord.tpl.suffix];
+    const idx = (rootIdx + (over && over[iv] !== undefined ? over[iv] : STEP[iv])) % 7;
+    const diff = (chord.bass - rootNote - scale[idx] + 24) % 12;
+    if (diff === 0) return String(idx + 1);
+    if (diff === 1) return "#" + (idx + 1);
+    if (diff === 11) return "b" + (idx + 1);
+    const b = degree((chord.bass - rootNote + 12) % 12, scale);
+    return b.prefix + (b.idx + 1);
+}
+
 /* rootNote: 0-11 or -1 unknown. Returns null when there is nothing to show.
  * An inversion adds the bass as a scale degree: C/E in C Major is I/3. */
 function romanNumeral(chord, rootNote, scaleName) {
@@ -155,10 +178,7 @@ function romanNumeral(chord, rootNote, scaleName) {
     const r = degree((chord.root - rootNote + 12) % 12, scale);
     const base = DEGREES[r.idx];
     let text = r.prefix + (chord.tpl.minor ? base.toLowerCase() : base) + chord.tpl.numeral;
-    if (chord.bass !== chord.root) {
-        const b = degree((chord.bass - rootNote + 12) % 12, scale);
-        text += "/" + b.prefix + (b.idx + 1);
-    }
+    if (chord.bass !== chord.root) text += "/" + bassDegree(chord, rootNote, scale || MAJOR, r.idx);
     return text;
 }
 
@@ -224,11 +244,7 @@ const GLYPHS = (() => {
  * character, and the width of a space. The numeral's 1.5x doubles every other
  * pixel, since the font only scales in whole steps. */
 const SIZE_NAME = { cols: [2, 2, 2, 2, 2], rows: [2, 2, 2, 2, 2, 2, 2], adv: 12, space: 6 };
-const SIZE_NUMERAL = {
-    cols: [2, 1, 2, 1, 2], rows: [2, 1, 2, 1, 2, 1, 2], adv: 9, space: 5,
-    /* the plain slash steps unevenly when every other pixel is doubled */
-    glyphs: { "/": "....#|...#.|...#.|..#..|.#...|.#...|#....".split("|") },
-};
+const SIZE_NUMERAL = { cols: [2, 1, 2, 1, 2], rows: [2, 1, 2, 1, 2, 1, 2], adv: 9, space: 5 };
 
 const sum = (a) => a.reduce((n, v) => n + v, 0);
 
@@ -241,7 +257,7 @@ function bigWidth(text, size) {
 function drawBig(ctx, text, size, cx, y) {
     let x = Math.round(cx - bigWidth(text, size) / 2);
     for (const ch of text) {
-        const rows = (size.glyphs && size.glyphs[ch]) || GLYPHS[ch];
+        const rows = GLYPHS[ch];
         if (rows) {
             let py = y;
             for (let gy = 0; gy < 7; gy++) {

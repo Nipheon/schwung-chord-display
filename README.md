@@ -2,11 +2,9 @@
 
 A [Schwung](https://github.com/charlesvestal/schwung) audio FX for the Ableton Move that shows the chord being played, by the pads or by a clip, on any track, with its roman numeral in the Set's key.
 
-```
-CH 3            C Major
-      Am7
-      vi7
-```
+![Chord Display page: CH 3 and C Major on top, C/E with I/3 below](docs/screenshot.png)
+
+*C major with E in the bass, in a C Major Set. Drawn by the module's own page code at 4x; Move's screen is 128x64.*
 
 No settings to tune: one **Channel** setting, and the display keeps the last chord until the next one. A single note, or two notes that are not a power chord, clears it.
 
@@ -26,7 +24,7 @@ It does not draw over Move's own screen; you see the chord on its page in the Sc
 
 - Audio FX receive the notes of every channel with their channel number, which is why this is an audio FX and not a MIDI FX.
 - Pad presses on Move's own surface can reach audio FX as pad numbers (68-99) on channel 1. Prefer a channel other than 1 for the chord track.
-- Inversions show a slash in both rows: the bass note in the name (`C/E`), its scale degree in the numeral (`I/3`).
+- Inversions show a slash in both rows: the bass note in the name (`C/E`), its scale degree in the key in the numeral (`I/3`). A bass outside the scale is named from its place in the chord: `D/F#` in C Major is `II/#4`.
 - The numeral uses the Set's root note and scale, read from Move. Notes outside the scale get `b` or `#`. Unknown scales use chromatic numerals; with no key, only the name is shown.
 - The chord and its numeral each get a row, in two fixed sizes (the numeral is smaller); long names never shrink or wrap.
 

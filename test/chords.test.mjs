@@ -101,12 +101,20 @@ test("inversion adds the bass as a scale degree", () => {
     assert.equal(roman([53, 55, 59, 62], C, "Major"), "V7/4");
     assert.equal(roman([48, 57, 64], C, "Major"), "vi/1");
     assert.equal(roman([50, 58, 62, 65], C, "Major"), "bVII/2");
-    /* a bass outside the scale gets b or #, by the same rule as the root */
-    assert.equal(roman([54, 62, 69], C, "Major"), "II/b5");
+    /* a bass outside the scale is named from its place in the chord */
+    assert.equal(roman([54, 62, 69], C, "Major"), "II/#4");
+    assert.equal(roman([56, 64, 71], C, "Major"), "III/#5");
+    assert.equal(roman([52, 55, 60], C, "Minor"), "I/#3");
+    assert.equal(roman([52, 55, 60], C, "Phrygian"), "I/#3");
+    assert.equal(roman([59, 62, 67], C, "Minor"), "V/#7");
+    /* the root keeps its own spelling: F#/Bb in C Major is bV/b7 */
+    assert.equal(roman([58, 61, 66], C, "Major"), "bV/b7");
+    /* the #9 of 7#9 is a raised 2nd, not a minor 3rd */
+    assert.equal(roman([51, 52, 55, 58, 60], C, "Major"), "I7#9/#2");
     /* degrees follow the scale, or fall back to chromatic ones */
     assert.equal(roman([48, 57, 64], 2, "Dorian"), "v/7");
     assert.equal(roman([52, 55, 60], C, "Hirajoshi"), "I/3");
-    assert.equal(roman([54, 62, 69], C, ""), "II/b5");
+    assert.equal(roman([54, 62, 69], C, ""), "II/#4");
 });
 
 test("roman numerals follow the scale", () => {
